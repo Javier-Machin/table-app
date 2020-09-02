@@ -38,7 +38,7 @@ export const fetchPets = (start, amount = ROWS_PER_FETCH, preserveStore = false)
 
 ##
 
-The rows itself are textareas, that way we support values of different lengths and they can be edited.
+The rows themselves are textareas, that way we support values of different lengths and they can be edited.
 
 In order to meet the auto expand / shrink requirement while keeping the 300px width, we set the width in CSS  
 and watch the height with a small JavaScript helper function.
