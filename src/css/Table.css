@@ -1,0 +1,39 @@
+.table-container {
+  margin: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.table {
+  border: 2px solid black;
+  border-radius: 5px;
+  height: 600px;
+  display: inline-flex;
+  flex-direction: column;
+  overflow: scroll;
+  overflow-x: hidden;
+  padding: 1rem;
+  margin-right: 1rem;
+}
+
+.table-row textarea {
+  height: 30px;
+  font-size: 20px;
+  width: 300px;
+  resize: none;
+  overflow: hidden;
+  padding-top: 5px;
+}
+
+.jump-to-row-input {
+  font-size: 20px;
+  padding: 5px 0 5px 5px;
+  width: 150px;
+}
+
+.submit-button {
+  font-size: 20px;
+  padding: 5px;
+  width: 50px;
+}

@@ -1,0 +1,3 @@
+export const FETCH_PETS = 'FETCH_PETS';
+export const FETCH_ADDITIONAL_PETS = 'FETCH_ADDITIONAL_PETS';
+export const ROWS_PER_FETCH = 50;
