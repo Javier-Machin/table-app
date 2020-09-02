@@ -14,15 +14,15 @@ const Table = (props) => {
     fetchPets(1);
   }, [fetchPets]);
 
-  // Throttle the scroll handler so it only can be called once every 80ms to prevent killing performance
+  // Throttle the scroll handler so it only can be called once every 100ms to prevent killing performance
   const handleInfiniteScroll = throttle(() => {
     const { scrollTop, scrollHeight, offsetHeight } = tableRef.current;
     const offset = scrollHeight - scrollTop - offsetHeight;
     const offsetPercentage = 100 - (offset / scrollHeight) * 100;
-    if (offsetPercentage >= 90) {
+    if (offsetPercentage >= 85) {
       fetchPets(lastFetchedPet + 1, 50, true);
     }
-  }, 180);
+  }, 100);
 
   const jumpToRow = (row) => {
     fetchPets(row);
@@ -34,6 +34,7 @@ const Table = (props) => {
     const formData = new FormData(event.target).entries();
     const data = Object.fromEntries(formData);
     const startRow = Number(data['jump-to-row-input']);
+
     jumpToRow(startRow);
   };
 
@@ -44,11 +45,6 @@ const Table = (props) => {
 
   return (
     <div className='table-container'>
-      <div className='table' ref={tableRef} onScroll={handleInfiniteScroll}>
-        {data.map((pet) => (
-          <TableRow key={pet.id} pet={pet} handleRowOnchange={handleRowOnchange} />
-        ))}
-      </div>
       <form onSubmit={handleJumpToRowInput}>
         <input
           type='number'
@@ -62,6 +58,12 @@ const Table = (props) => {
           GO
         </button>
       </form>
+      <div className='table' ref={tableRef} onScroll={handleInfiniteScroll}>
+        {data.map((pet) => (
+          <TableRow key={pet.id} pet={pet} handleRowOnchange={handleRowOnchange} />
+        ))}
+      </div>
+      <span className='total-rows'>Total rows: 1000000</span>
     </div>
   );
 };

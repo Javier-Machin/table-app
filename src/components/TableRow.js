@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 const TableRow = ({ pet, handleRowOnchange }) => {
   return (
     <div className='table-row'>
       <textarea
+        className='table-input'
         rows='1'
         onChange={handleRowOnchange}
         name={`input-${pet.id}`}
@@ -13,4 +14,4 @@ const TableRow = ({ pet, handleRowOnchange }) => {
   );
 };
 
-export default TableRow;
+export default memo(TableRow);
