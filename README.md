@@ -1,68 +1,129 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Dealing with a table with 1 million rows
 
-## Available Scripts
+Live version: https://javier-machin.github.io/table-app/
 
-In the project directory, you can run:
+Initially I will go through the version I implemented.  
+This approach felt like something I was able to do with my current knowledge within a realistic time span for a challenge of this kind.
 
-### `npm start`
+After that I'll give my thoughts on some improvements that could be done to this approach and also how an optimal solution would look like.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+#
+To make it easier to reason with, we are going to pretend it is a pets table.
+##
+After generating 1 millions rows of dummy data,  
+I start by populating the redux store with only 50 rows of data.  
+This initial load is triggered by an useEffect hook, we call the redux action from there.
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+```
+  useEffect(() => {
+    fetchPets(1);
+  }, [fetchPets]);
+```
+The action:
+```
+export const fetchPets = (start, amount = ROWS_PER_FETCH, preserveStore = false) => {
+  const data = fetchPetsData(start, amount);
 
-### `npm test`
+  const pets = {
+    data,
+    lastFetchedPet: start + ROWS_PER_FETCH,
+  };
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  return {
+    type: preserveStore ? FETCH_ADDITIONAL_PETS : FETCH_PETS,
+    pets,
+  };
+};
+```
 
-### `npm run build`
+##
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The rows itself are textareas, that way we support values of different lengths and they can be edited.
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+In order to meet the auto expand / shrink requirement while keeping the 300px width, we set the width in CSS  
+and watch the height with a small JavaScript helper function.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+const resize = (target) => {
+  target.style.height = 'auto';
+  target.style.height = `${target.scrollHeight}px`;
+};
+```
 
-### `npm run eject`
+This resize function is called from the onChange handler of the textarea.  
+The way it works is, we set the height to auto, making it shrink if the current content fits in a smaller input after the last change.  
+Setting the height to the scrollHeight makes the input as tall as it needs in order to fit the current content.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+##
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+In order to be able to navigate the table by scrolling without killing our machine in the process, I implemented infinite scrolling.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```
+const handleInfiniteScroll = throttle(() => {
+    const { scrollTop, scrollHeight, offsetHeight } = tableRef.current;
+    const offset = scrollHeight - scrollTop - offsetHeight;
+    const offsetPercentage = 100 - (offset / scrollHeight) * 100;
+    if (offsetPercentage >= 85) {
+      fetchPets(lastFetchedPet + 1, 50, true);
+    }
+  }, 100);
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+This handler is hooked to the onScroll event of the table.  
+It checks how far down the scroll we are.  
+Once we reach 85 or more, it will call the action to fetch additional rows of data,  
+this time with the third optional parameter `preserveStore` set to true, which will dispatch the action that keeps the current rows in the store (and in the DOM).  
 
-## Learn More
+This function is wrapped in a throttle helper function to prevent calling the handler more than once every 100ms, it improves performance quite a bit.  
+The throttle itself is a very simple JS function, normally I would use the one provided by lodash but wanted to keep third party libraries to a minimum.  
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+function throttle(callback, delay) {
+  let timeOut = false;
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+  return function () {
+    if (!timeOut) {
+      callback.call(this);
 
-### Code Splitting
+      timeOut = true;
+      setTimeout(function () {
+        timeOut = false;
+      }, delay);
+    }
+  };
+}
+```
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+##
 
-### Analyzing the Bundle Size
+For the ability to move instantly to any point of the table, I added a numeric input field.    
+It triggers the fetch of 50 rows starting on the specified one. We can make use of the infinite scroll from there.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+```
+  const jumpToRow = (row) => {
+    fetchPets(row);
+    tableRef.current.scrollTop = 0;
+  };
+```
 
-### Making a Progressive Web App
+# 
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+One of the many ways this small app could be improved would by checking how many rows of data we have in the store, and after a certain number as we fetch additional rows via the infinite scroller we remove from the other end, to keep the total number under control.
 
-### Advanced Configuration
+# About the general structure
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+It's a very simple react app with a highly organized redux implementation that might seem overkill for a small app but would work fine as it scales.  
+It follows the current official documentation guidelines and I have used it before with great success.
 
-### Deployment
+# How the optimal implementation to solve this problem would look like (from my point of view and my current information)
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+I suspect that the way the third party libraries solve this problem is by calculating the height of the table as it already had the 1 million elements, but without actually adding them to the DOM.  
+That will provide a scroll bar that matches the total number of elements.  
 
-### `npm run build` fails to minify
+Then it probably uses some kind of handler that gets triggered on scroll similar to the one I used for the infinite scroll (or they might actually debounce it and only call it once the user stops moving).  
+There they measure the scroll distance, and calculate which part of the table would line up with that position, then fetch and render only the elements that the user would expect around that area.  
+I would also expect some CSS trickery to center the 20 or so rows to the position currently in view.  
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+I didn't go this route because it would need quite a bit of research on my end, that would defeat the idea of this challenge, and even with that I'm not sure if the performance would be good enough to come up with something usable for a 1 million rows table, therefore I went with the implementation explained above.  
+
+Thanks for reading me.
